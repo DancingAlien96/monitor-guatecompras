@@ -10,10 +10,10 @@ services:
       # Horarios de envio (formato cron). Por defecto 7:00 (manana) y 19:00 (noche).
       CRON_MORNING: "0 7 * * *"
       CRON_NIGHT: "0 19 * * *"
-      # Corrida de recuperacion al arrancar: si la PC estuvo apagada y se pierde
-      # un horario, al encender revisa de inmediato y envia lo nuevo (el historial
-      # evita repetidos). Recomendado para una PC de oficina que se apaga de noche.
-      RUN_ON_START: "true"
+      # Corrida de recuperacion al arrancar. Util si la PC se apaga de noche.
+      # En una PC 24/7 se deja en "false": bastan las 2 corridas diarias y se
+      # minimizan las peticiones a la API (que bloquea IPs con descargas frecuentes).
+      RUN_ON_START: "false"
     # La contrasena SMTP (GUATECOMPRAS_SMTP_PASSWORD) se toma del archivo .env.
     env_file:
       - .env
