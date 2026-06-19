@@ -35,10 +35,12 @@ import os
 import re
 import smtplib
 import sys
+import time
 import unicodedata
 import zipfile
 from email.message import EmailMessage
 from email.utils import formataddr
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen, Request
 
 API_FILES = "https://ocds.guatecompras.gt/files"
@@ -95,10 +97,37 @@ def contiene_termino(texto_norm, termino_norm):
     return re.search(patron, texto_norm) is not None
 
 
-def http_get(url, timeout=120):
+# Codigos HTTP que suelen ser temporales (rate-limit / Cloudflare / caida momentanea).
+# Ante estos se reintenta; ante otros (p.ej. 404) se falla de inmediato.
+HTTP_REINTENTABLES = (403, 408, 429, 500, 502, 503, 504)
+
+
+def http_get(url, timeout=120, reintentos=3, espera_base=60):
+    """Descarga con reintentos y backoff exponencial ante bloqueos transitorios.
+
+    La API OCDS de Guatecompras esta detras de Cloudflare y puede devolver 403/429
+    temporalmente cuando hay demasiadas peticiones seguidas. En vez de perder la
+    corrida, se espera y se reintenta (60s, 120s, 240s por defecto). Si el bloqueo
+    persiste, la siguiente corrida programada lo recupera (el historial evita
+    duplicados, asi que no se pierde ningun concurso).
+    """
     req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=timeout) as resp:
-        return resp.read()
+    ultimo_error = None
+    for intento in range(1, reintentos + 2):  # 1 intento inicial + N reintentos
+        try:
+            with urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except HTTPError as e:
+            ultimo_error = e
+            if e.code not in HTTP_REINTENTABLES:
+                raise  # error definitivo: no tiene sentido reintentar
+        except URLError as e:
+            ultimo_error = e  # error de red/timeout: reintentable
+        if intento <= reintentos:
+            espera = espera_base * (2 ** (intento - 1))
+            log(f"  Descarga fallo ({ultimo_error}). Reintento {intento}/{reintentos} en {espera}s...")
+            time.sleep(espera)
+    raise ultimo_error  # se agotaron los reintentos
 
 
 # --------------------------------------------------------------------------- #
