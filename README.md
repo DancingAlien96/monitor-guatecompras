@@ -159,6 +159,67 @@ al día, por ejemplo a las 7:00, 12:00 y 17:00:
 3. Programador de tareas → Crear tarea básica → diaria → Acción: iniciar `correr.bat`.
 4. Para 3 veces al día, crea 3 desencadenadores diarios para la misma tarea.
 
+## 6.bis. Producción con Docker (recomendado)
+
+El proyecto incluye un contenedor que corre el monitor **2 veces al día**
+(mañana y noche) usando `cron` interno, con la zona horaria de Guatemala.
+
+### Requisitos
+- Docker y Docker Compose instalados en el servidor.
+- `config.json` y `.env` creados (ver secciones 3.1–3.3).
+
+### Puesta en marcha
+
+```bash
+# 1. Configura tus filtros/correo y la contraseña
+cp config.example.json config.json   # edítalo
+cp .env.example .env                  # pon GUATECOMPRAS_SMTP_PASSWORD
+
+# 2. Construye y arranca en segundo plano
+docker compose up -d --build
+
+# 3. Ver los logs en vivo
+docker compose logs -f
+```
+
+El contenedor queda corriendo (`restart: unless-stopped`) y dispara el monitor
+automáticamente a las **07:00** y **19:00** hora de Guatemala.
+
+### Cambiar los horarios
+
+Edita las variables en `docker-compose.yml` (formato cron, hora local según `TZ`):
+
+```yaml
+environment:
+  TZ: America/Guatemala
+  CRON_MORNING: "0 7 * * *"    # 7:00 a.m.
+  CRON_NIGHT:   "0 19 * * *"   # 7:00 p.m.
+```
+
+Luego aplica los cambios: `docker compose up -d`.
+
+### Probar el contenedor sin esperar al horario
+
+Pon `RUN_ON_START: "true"` en `docker-compose.yml` (o lánzalo así una vez):
+
+```bash
+RUN_ON_START=true docker compose up --build
+```
+
+Ejecuta una corrida inmediata al arrancar; revísala con `docker compose logs -f`.
+
+### Persistencia
+
+- `state.json` (historial anti-repetición) y `monitor.log` se guardan en el
+  volumen `monitor-data`, así que **sobreviven** a reinicios y reconstrucciones.
+- `config.json` se monta de solo lectura; cambia el archivo y reinicia el
+  contenedor (`docker compose restart`) para aplicar nuevos filtros.
+
+> **Nota:** como la fuente OCDS se actualiza una vez al día y el monitor
+> deduplica, la corrida de la noche normalmente **no enviará correo** salvo que
+> hayan aparecido concursos nuevos durante el día. Es el comportamiento esperado:
+> solo recibes correo cuando hay algo nuevo, revisado dos veces al día.
+
 ## 7. Notas y límites
 
 - **Cobertura OCDS:** incluye licitación, cotización, compra directa y baja cuantía

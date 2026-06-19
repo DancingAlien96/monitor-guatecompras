@@ -1,0 +1,6 @@
+# Los scripts de shell y archivos de contenedor SIEMPRE con LF,
+# aunque se editen en Windows (CRLF rompe el shebang dentro del contenedor Linux).
+*.sh        text eol=lf
+entrypoint.sh text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf

@@ -1,0 +1,12 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+.env
+config.json
+state.json
+monitor.log
+preview.html
+preview.csv
+data/
+README.md

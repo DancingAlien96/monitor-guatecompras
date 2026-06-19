@@ -1,0 +1,25 @@
+services:
+  monitor:
+    build: .
+    image: guatecompras-monitor
+    container_name: guatecompras-monitor
+    restart: unless-stopped
+    environment:
+      # Zona horaria: las horas de abajo se interpretan en esta zona.
+      TZ: America/Guatemala
+      # Horarios de envio (formato cron). Por defecto 7:00 (manana) y 19:00 (noche).
+      CRON_MORNING: "0 7 * * *"
+      CRON_NIGHT: "0 19 * * *"
+      # Pon "true" para enviar una corrida de prueba al arrancar el contenedor.
+      RUN_ON_START: "false"
+    # La contrasena SMTP (GUATECOMPRAS_SMTP_PASSWORD) se toma del archivo .env.
+    env_file:
+      - .env
+    volumes:
+      # Tu configuracion de filtros y correo (solo lectura).
+      - ./config.json:/app/config.json:ro
+      # Persistencia de state.json (dedupe) y monitor.log entre reinicios.
+      - monitor-data:/app/data
+
+volumes:
+  monitor-data:
