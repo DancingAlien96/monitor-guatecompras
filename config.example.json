@@ -1,0 +1,28 @@
+{
+  "filtros": {
+    "palabras_clave": ["equipo medico", "insumos", "construccion"],
+    "excluir_palabras": [],
+    "entidades": [],
+    "categorias": [],
+    "metodos": [],
+    "departamentos": [],
+    "monto_minimo": null,
+    "monto_maximo": null
+  },
+  "correo": {
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "usar_tls": true,
+    "usar_ssl": false,
+    "remitente": "tucorreo@gmail.com",
+    "nombre_remitente": "Monitor Guatecompras",
+    "destinatarios": ["cliente@dominio.com"],
+    "asunto_prefijo": "[Guatecompras] Concursos vigentes",
+    "adjuntar_csv": true
+  },
+  "opciones": {
+    "meses_hacia_atras": 0,
+    "solo_nuevos": true,
+    "solo_con_cierre_vigente": true
+  }
+}

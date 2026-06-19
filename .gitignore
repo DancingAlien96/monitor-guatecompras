@@ -1,0 +1,10 @@
+.env
+monitor.log
+__pycache__/
+*.pyc
+
+# Configuración y datos privados / generados
+config.json
+state.json
+preview.csv
+preview.html

@@ -1,0 +1,180 @@
+# Monitor de Concursos Vigentes — Guatecompras
+
+Automatización en **Python** que revisa los concursos **vigentes** publicados en
+Guatecompras, los filtra según tus criterios y envía un resumen por **correo
+electrónico**. Pensado para correr solo (cron / Programador de tareas).
+
+No usa scraping ni Selenium: consume la **API oficial de datos abiertos OCDS** de
+Guatecompras (`https://ocds.guatecompras.gt`, licencia CC BY 4.0), que se actualiza
+a diario. Esto lo hace estable y fácil de mantener.
+
+"Vigente" = la licitación está en estado OCDS `active` (etapa de adjudicación/recepción
+de ofertas abierta).
+
+---
+
+## 1. Requisitos
+
+- Python 3.8 o superior. Verifica con: `python3 --version`
+- Sin librerías externas (usa solo la librería estándar).
+- La máquina debe tener salida a internet hacia `ocds.guatecompras.gt`.
+- Una cuenta de correo desde la cual enviar (con acceso SMTP).
+
+## 2. Archivos
+
+| Archivo | Para qué |
+|---|---|
+| `monitor.py` | El programa principal. |
+| `config.example.json` | Plantilla de configuración. **Cópiala a `config.json` y edítala.** |
+| `state.json` | Se crea solo. Guarda los concursos ya notificados (para no repetir). |
+| `test_local.py` | Pruebas de la lógica (no requiere internet). |
+
+## 3. Configuración
+
+Copia la plantilla y edítala:
+
+```bash
+cp config.example.json config.json
+```
+
+### 3.1 Filtros (`"filtros"`)
+
+Todos los filtros son **opcionales**. Deja una lista vacía `[]` o `null` para no aplicarlo.
+Cuando hay varios valores en una lista, basta con que coincida **uno** (OR). Las
+comparaciones ignoran mayúsculas y acentos.
+
+| Campo | Qué hace | Ejemplo |
+|---|---|---|
+| `palabras_clave` | El concurso debe contener al menos una, en título/descripción/entidad/método. | `["equipo medico", "insumos"]` |
+| `excluir_palabras` | Descarta concursos que contengan alguna. | `["usado", "arrendamiento"]` |
+| `entidades` | Solo de estas entidades compradoras (coincidencia parcial). | `["ministerio de salud"]` |
+| `categorias` | Tipo: `goods` (bienes), `works` (obra), `services` (servicios). | `["goods", "works"]` |
+| `metodos` | Método de compra (parcial). | `["licitacion", "cotizacion"]` |
+| `departamentos` | Mejor esfuerzo por dirección de la entidad. | `["guatemala", "peten"]` |
+| `monto_minimo` / `monto_maximo` | Rango del monto del concurso (en quetzales). | `90000` |
+
+> Envíame tus filtros y te dejo el `config.json` ya armado.
+
+### 3.2 Correo (`"correo"`)
+
+```json
+"correo": {
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587,
+  "usar_tls": true,
+  "usar_ssl": false,
+  "remitente": "tucorreo@gmail.com",
+  "nombre_remitente": "Monitor Guatecompras",
+  "destinatarios": ["cliente@dominio.com"],
+  "asunto_prefijo": "[Guatecompras] Concursos vigentes",
+  "adjuntar_csv": true
+}
+```
+
+Presets de SMTP comunes:
+
+| Proveedor | smtp_host | puerto | usar_tls | usar_ssl |
+|---|---|---|---|---|
+| Gmail / Google Workspace | `smtp.gmail.com` | 587 | true | false |
+| Outlook / Microsoft 365 | `smtp.office365.com` | 587 | true | false |
+| Otro (SSL directo) | el de tu proveedor | 465 | false | true |
+
+### 3.3 Contraseña del correo (importante, por seguridad)
+
+La contraseña **no** se guarda en `config.json`. Se lee desde `.env` o desde una
+variable de entorno del sistema.
+
+Crea el archivo `.env` desde la plantilla:
+
+```bash
+cp .env.example .env
+```
+
+Y edita su contenido:
+
+```env
+GUATECOMPRAS_SMTP_PASSWORD="tu_contrasena_o_app_password"
+```
+
+También puedes definirla directamente en el entorno:
+
+```bash
+export GUATECOMPRAS_SMTP_PASSWORD="tu_contrasena_o_app_password"
+```
+
+- **Gmail / Google Workspace:** no sirve tu contraseña normal. Activa verificación
+  en 2 pasos y crea una **"Contraseña de aplicación"** de 16 caracteres; usa esa.
+- **Outlook/365:** según la cuenta, también puede requerir contraseña de aplicación.
+
+## 4. Probar antes de enviar
+
+Prueba sin enviar correo (genera `preview.html` y `preview.csv` para revisar):
+
+```bash
+python3 monitor.py --dry-run
+```
+
+Correr la lógica sin internet (pruebas):
+
+```bash
+python3 test_local.py
+```
+
+## 5. Ejecutar de verdad
+
+```bash
+export GUATECOMPRAS_SMTP_PASSWORD="..."
+python3 monitor.py
+```
+
+Solo envía correo si hay concursos **nuevos** (no notificados antes). El historial se
+guarda en `state.json`. Para forzar el reenvío de todos los que coinciden:
+`python3 monitor.py --no-dedupe`.
+
+## 6. Automatizar
+
+### macOS / Linux (cron)
+
+Edita el crontab con `crontab -e` y agrega (ejemplo: todos los días a las 7:00 a.m.):
+
+```cron
+0 7 * * * cd /ruta/al/guatecompras_monitor && GUATECOMPRAS_SMTP_PASSWORD="..." /usr/bin/python3 monitor.py >> monitor.log 2>&1
+```
+
+Si ya usas `.env`, no necesitas poner la contraseña en el cron. Para correr 3 veces
+al día, por ejemplo a las 7:00, 12:00 y 17:00:
+
+```cron
+0 7,12,17 * * * cd /ruta/al/guatecompras_monitor && /usr/bin/python3 monitor.py >> monitor.log 2>&1
+```
+
+### Windows (Programador de tareas)
+
+1. Crea un archivo `correr.bat`:
+   ```bat
+   cd C:\ruta\al\guatecompras_monitor
+   python monitor.py >> monitor.log 2>&1
+   ```
+2. Guarda la contraseña en `.env`.
+3. Programador de tareas → Crear tarea básica → diaria → Acción: iniciar `correr.bat`.
+4. Para 3 veces al día, crea 3 desencadenadores diarios para la misma tarea.
+
+## 7. Notas y límites
+
+- **Cobertura OCDS:** incluye licitación, cotización, compra directa y baja cuantía
+  con NOG desde 2020. Excluye el módulo NPG y registros previos a 2020.
+- **Frecuencia de datos:** la fuente se actualiza diariamente; correr más de una vez
+  al día no aporta datos nuevos.
+- **`meses_hacia_atras`:** `0` procesa solo el mes en curso (lo normal). Ponlo en `1`
+  los primeros días del mes para no perder concursos abiertos a fin del mes anterior.
+- **`solo_con_cierre_vigente`:** `true` descarta concursos cuyo estado siga como
+  `active` en la API pero cuya fecha de cierre ya pasó.
+- **Departamento:** es "mejor esfuerzo" según la dirección registrada de la entidad;
+  no todos los registros la traen.
+- **Enlace al concurso:** se arma con el NOG hacia la consulta de Guatecompras; si la
+  ruta exacta cambiara, el NOG igual te permite ubicarlo en el portal.
+
+## 8. Fuente
+
+Datos abiertos OCDS de Guatecompras — Ministerio de Finanzas Públicas.
+API: https://ocds.guatecompras.gt/api-ocds · Licencia CC BY 4.0.

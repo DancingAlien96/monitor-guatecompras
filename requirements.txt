@@ -1,0 +1,5 @@
+# El script usa solo la libreria estandar de Python (3.8+).
+# No requiere instalar paquetes externos.
+#
+# (Opcional) Si en el futuro quieres validar el config con esquema, podrias agregar:
+# jsonschema>=4.0
