@@ -220,6 +220,52 @@ Ejecuta una corrida inmediata al arrancar; revísala con `docker compose logs -f
 > hayan aparecido concursos nuevos durante el día. Es el comportamiento esperado:
 > solo recibes correo cuando hay algo nuevo, revisado dos veces al día.
 
+### En una Raspberry Pi (ideal para este proyecto)
+
+Una Raspberry Pi en tu oficina es la mejor opción: bajo consumo, siempre
+encendida e **IP guatemalteca** (la API de Guatecompras solo responde bien a
+IPs de Guatemala y bloquea descargas demasiado frecuentes). La imagen es
+multi-arquitectura, así que corre en ARM sin cambios.
+
+Requisitos: **Raspberry Pi OS de 64 bits** (recomendado) y Docker.
+
+```bash
+# 1. Instalar Docker (una sola vez)
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER      # luego cierra sesión y vuelve a entrar
+
+# 2. Clonar y configurar
+git clone https://github.com/DancingAlien96/monitor-guatecompras.git
+cd monitor-guatecompras
+cp config.example.json config.json   # edita filtros y correos
+cp .env.example .env                  # pon GUATECOMPRAS_SMTP_PASSWORD
+
+# 3. Construir y arrancar
+docker compose up -d --build
+
+# 4. Que arranque solo cuando se reinicie la Pi
+sudo systemctl enable docker         # el contenedor vuelve con Docker (restart: unless-stopped)
+```
+
+Ver los logs:
+
+```bash
+docker compose logs -f
+# o el log persistente de las corridas programadas:
+docker compose exec monitor cat /app/data/monitor.log
+```
+
+**Memoria (importante en Pi de 1–2 GB):** el script carga el paquete mensual
+completo en RAM. Para evitar que la Pi se quede sin memoria, activa swap:
+
+```bash
+sudo dphys-swapfile swapoff
+sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=2048/' /etc/dphys-swapfile
+sudo dphys-swapfile setup && sudo dphys-swapfile swapon
+```
+
+En una Pi 4/5 con 4 GB o más normalmente no hace falta.
+
 ## 7. Notas y límites
 
 - **Cobertura OCDS:** incluye licitación, cotización, compra directa y baja cuantía
