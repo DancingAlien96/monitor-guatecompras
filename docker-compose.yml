@@ -10,8 +10,10 @@ services:
       # Horarios de envio (formato cron). Por defecto 7:00 (manana) y 19:00 (noche).
       CRON_MORNING: "0 7 * * *"
       CRON_NIGHT: "0 19 * * *"
-      # Pon "true" para enviar una corrida de prueba al arrancar el contenedor.
-      RUN_ON_START: "false"
+      # Corrida de recuperacion al arrancar: si la PC estuvo apagada y se pierde
+      # un horario, al encender revisa de inmediato y envia lo nuevo (el historial
+      # evita repetidos). Recomendado para una PC de oficina que se apaga de noche.
+      RUN_ON_START: "true"
     # La contrasena SMTP (GUATECOMPRAS_SMTP_PASSWORD) se toma del archivo .env.
     env_file:
       - .env
