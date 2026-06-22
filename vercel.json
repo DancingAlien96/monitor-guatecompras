@@ -1,7 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": null,
-  "installCommand": null,
-  "outputDirectory": "web"
+  "outputDirectory": "web",
+  "crons": [
+    { "path": "/api/notify", "schedule": "0 13 * * *" },
+    { "path": "/api/notify", "schedule": "0 1 * * *" }
+  ]
 }

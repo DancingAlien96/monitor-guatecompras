@@ -46,6 +46,17 @@ async function revisar() {
   } catch (e) {}
 }
 
+// Recibe el push enviado por el servidor (Vercel Cron) y muestra la notificacion.
+self.addEventListener('push', function (e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (x) {}
+  e.waitUntil(self.registration.showNotification(data.title || 'Concursos Guatecompras', {
+    body: data.body || 'Revisa los concursos nuevos.',
+    icon: 'icon-192.png', badge: 'icon-192.png',
+    data: { url: data.url || './' },
+  }));
+});
+
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || './';

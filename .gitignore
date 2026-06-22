@@ -8,3 +8,6 @@ config.json
 state.json
 preview.csv
 preview.html
+
+# Node (funciones serverless de Vercel)
+node_modules/
