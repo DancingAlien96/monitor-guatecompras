@@ -35,6 +35,12 @@
     .cfg-item .txt { flex: 1 1 180px; font-size: 13px; color: #444; }
     .cfg-btn { background: #eaf1f6; color: var(--azul); border: 1px solid #cfe0ee; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
     .cfg-nota { font-size: 12px; color: #888; margin-top: 8px; line-height: 1.4; }
+    /* Barra de busqueda y filtros (lupa) */
+    #herramientas { display: none; flex-wrap: wrap; gap: 8px; padding: 0 12px 12px; }
+    #herramientas input, #herramientas select { padding: 10px; border: 1px solid #cfd8dd; border-radius: 8px; font-size: 14px; background: #fff; color: #222; }
+    #herramientas input { flex: 1 1 100%; }
+    #herramientas select { flex: 1 1 calc(50% - 4px); }
+    @media (min-width: 700px) { #herramientas input { flex: 2 1 240px; } #herramientas select { flex: 1 1 170px; } }
     /* Lista: cuadricula responsiva */
     .lista { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 0 12px 24px; }
     @media (min-width: 700px) { .lista { grid-template-columns: 1fr 1fr; } }
@@ -81,6 +87,16 @@
   <div class="wrap">
     <div class="barra"><button class="principal" id="buscar" onclick="buscar()">Buscar concursos</button></div>
     <div id="estado"></div>
+    <div id="herramientas">
+      <input id="busca" type="search" placeholder="🔍 Buscar (título, entidad, NOG)…" oninput="aplicarVista()" />
+      <select id="orden" onchange="aplicarVista()">
+        <option value="cierre">Cierre más próximo</option>
+        <option value="montoDesc">Monto: mayor a menor</option>
+        <option value="montoAsc">Monto: menor a mayor</option>
+        <option value="titulo">Título (A–Z)</option>
+      </select>
+      <select id="entidad" onchange="aplicarVista()"><option value="">Todas las entidades</option></select>
+    </div>
     <div id="lista" class="lista"></div>
   </div>
   <footer>Fuente: datos abiertos OCDS de Guatecompras (CC BY 4.0).</footer>
@@ -109,23 +125,56 @@
   function toggleConfig() { document.getElementById("config").classList.toggle("abierto"); }
 
   // --- Buscar y mostrar ---
+  var _todos = []; // todos los concursos cargados de la API (sin filtrar en pantalla)
+
   async function buscar() {
     var btn = document.getElementById("buscar");
     btn.disabled = true;
     document.getElementById("lista").innerHTML = "";
     try {
       estado("Descargando y filtrando concursos (puede tardar)...");
-      var lista = await obtenerConcursos();
-      render(lista);
-      estado(lista.length + " concurso(s) de compra directa que coinciden con tus filtros.");
-      await avisarNuevos(lista);
+      _todos = await obtenerConcursos();
+      prepararHerramientas();
+      aplicarVista();
+      await avisarNuevos(_todos);
     } catch (e) {
+      document.getElementById("herramientas").style.display = "none";
       var msg = String(e && e.message ? e.message : e), extra = "";
       if (/Failed to fetch|NetworkError|Load failed/i.test(msg))
         extra = " — Puede ser bloqueo temporal de la API por frecuencia. Espera un momento y reintenta.";
       document.getElementById("lista").innerHTML = '<div class="aviso">⚠️ ' + escapeHtml(msg) + escapeHtml(extra) + '</div>';
       estado("");
     } finally { btn.disabled = false; }
+  }
+
+  // --- Lupa + filtros sobre los resultados ya cargados ---
+  function prepararHerramientas() {
+    document.getElementById("herramientas").style.display = _todos.length ? "flex" : "none";
+    var ents = Array.from(new Set(_todos.map(function (c) { return c.comprador; }).filter(Boolean))).sort();
+    var sel = document.getElementById("entidad");
+    sel.innerHTML = '<option value="">Todas las entidades (' + ents.length + ')</option>' +
+      ents.map(function (e) { return '<option value="' + escapeHtml(e) + '">' + escapeHtml(e) + '</option>'; }).join("");
+  }
+
+  function aplicarVista() {
+    var q = normaliza(document.getElementById("busca").value);
+    var ent = document.getElementById("entidad").value;
+    var orden = document.getElementById("orden").value;
+    var lista = _todos.filter(function (c) {
+      if (ent && c.comprador !== ent) return false;
+      if (q && normaliza([c.titulo, c.nog, c.comprador, c.metodo].join(" ")).indexOf(q) < 0) return false;
+      return true;
+    });
+    lista.sort(function (a, b) {
+      if (orden === "montoDesc") return (b.monto || 0) - (a.monto || 0);
+      if (orden === "montoAsc") return (a.monto || 0) - (b.monto || 0);
+      if (orden === "titulo") return String(a.titulo).localeCompare(String(b.titulo));
+      return (a.fecha_cierre || "9999").localeCompare(b.fecha_cierre || "9999");
+    });
+    render(lista);
+    estado(lista.length === _todos.length
+      ? _todos.length + " concurso(s) de compra directa."
+      : lista.length + " de " + _todos.length + " concurso(s).");
   }
 
   function render(lista) {
