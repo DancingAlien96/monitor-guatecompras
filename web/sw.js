@@ -2,7 +2,7 @@
 // para la interfaz, y en Android revisa concursos nuevos en segundo plano.
 importScripts('vendor/fflate.js', 'core.js');
 
-var CACHE = 'gc-v1';
+var CACHE = 'gc-v3';
 var SHELL = ['./', 'index.html', 'core.js', 'vendor/fflate.js', 'manifest.json',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
@@ -18,12 +18,19 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 
-// Solo se cachea el shell (mismo origen). Las llamadas a la API pasan directo.
+// "Red primero": siempre intenta lo mas nuevo si hay internet, y guarda copia
+// para funcionar offline. Asi los cambios aparecen sin quedarse en cache vieja.
+// (Las llamadas a la API, de otro origen, pasan directo sin tocar el cache.)
 self.addEventListener('fetch', function (e) {
   var u = new URL(e.request.url);
-  if (u.origin === self.location.origin) {
-    e.respondWith(caches.match(e.request).then(function (r) { return r || fetch(e.request); }));
-  }
+  if (u.origin !== self.location.origin) return;
+  e.respondWith(
+    fetch(e.request).then(function (resp) {
+      var copia = resp.clone();
+      caches.open(CACHE).then(function (c) { c.put(e.request, copia); });
+      return resp;
+    }).catch(function () { return caches.match(e.request); })
+  );
 });
 
 // Revision periodica en segundo plano (Android/Chrome, mejor esfuerzo).
