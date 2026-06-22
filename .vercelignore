@@ -1,0 +1,13 @@
+# Vercel solo publica la pagina web (carpeta web/, via vercel.json).
+# Se ocultan los archivos de Python/Docker para que NO detecte un proyecto Python.
+*.py
+requirements.txt
+__pycache__/
+Dockerfile
+docker-compose.yml
+entrypoint.sh
+.dockerignore
+*.log
+state.json
+preview.html
+preview.csv
