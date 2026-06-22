@@ -2,219 +2,202 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Concursos Guatecompras</title>
-  <!-- Para "Agregar a pantalla de inicio" en iPhone/Android -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Concursos" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <meta name="theme-color" content="#1a5276" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Concursos" />
   <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f4f6f8; color: #222; }
-    header { background: #1a5276; color: #fff; padding: 16px; position: sticky; top: 0; }
-    header h1 { margin: 0; font-size: 18px; }
-    header p { margin: 4px 0 0; font-size: 12px; color: #cfe0ee; }
-    .barra { padding: 12px 16px; display: flex; gap: 8px; align-items: center; }
-    button { background: #1a5276; color: #fff; border: 0; border-radius: 6px; padding: 10px 16px; font-size: 14px; font-weight: bold; }
+    :root { --azul: #1a5276; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f4f6f8; color: #222; }
+    header { background: var(--azul); color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; padding-top: max(14px, env(safe-area-inset-top)); }
+    .hrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; max-width: 980px; margin: 0 auto; }
+    header h1 { margin: 0; font-size: clamp(16px, 4.5vw, 20px); }
+    header p { margin: 3px 0 0; font-size: 12px; color: #cfe0ee; }
+    .icono-btn { background: rgba(255,255,255,.15); border: 0; color: #fff; font-size: 18px; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; flex: 0 0 auto; }
+    .wrap { max-width: 980px; margin: 0 auto; width: 100%; }
+    .barra { padding: 12px 16px; }
+    button.principal { background: var(--azul); color: #fff; border: 0; border-radius: 8px; padding: 12px 18px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; max-width: 320px; }
     button:disabled { opacity: .6; }
     #estado { font-size: 13px; color: #555; padding: 0 16px 8px; }
-    .aviso { background: #fdecea; color: #b71c1c; padding: 10px 16px; font-size: 13px; }
-    .card { background: #fff; margin: 10px 12px 0; padding: 12px; border: 1px solid #e3e7eb; border-radius: 8px; }
-    .card a { color: #1a5276; font-weight: bold; text-decoration: none; font-size: 15px; }
-    .meta { color: #666; font-size: 12px; margin-top: 2px; }
-    .fila { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; }
+    .aviso { background: #fdecea; color: #b71c1c; padding: 10px 16px; font-size: 13px; margin: 0 12px; border-radius: 8px; }
+    /* Panel de configuracion */
+    #config { display: none; background: #fff; border-bottom: 1px solid #e3e7eb; padding: 14px 16px; }
+    #config.abierto { display: block; }
+    #config .cfgwrap { max-width: 980px; margin: 0 auto; }
+    #config h2 { font-size: 14px; margin: 0 0 10px; color: var(--azul); }
+    .cfg-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid #f0f0f0; }
+    .cfg-item:first-of-type { border-top: 0; }
+    .cfg-item .txt { flex: 1 1 180px; font-size: 13px; color: #444; }
+    .cfg-btn { background: #eaf1f6; color: var(--azul); border: 1px solid #cfe0ee; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .cfg-nota { font-size: 12px; color: #888; margin-top: 8px; line-height: 1.4; }
+    /* Lista: cuadricula responsiva */
+    .lista { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 0 12px 24px; }
+    @media (min-width: 700px) { .lista { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1000px) { .lista { grid-template-columns: 1fr 1fr 1fr; } }
+    .card { background: #fff; padding: 12px; border: 1px solid #e3e7eb; border-radius: 8px; }
+    .card a { color: var(--azul); font-weight: bold; text-decoration: none; font-size: 15px; word-break: break-word; }
+    .meta { color: #666; font-size: 12px; margin-top: 3px; word-break: break-word; }
+    .fila { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 13px; }
     .monto { font-weight: 600; }
     footer { text-align: center; color: #999; font-size: 11px; padding: 20px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Concursos vigentes — Guatecompras</h1>
-    <p id="sub">Compra directa · filtrados por palabra clave</p>
+    <div class="hrow">
+      <div>
+        <h1>Concursos vigentes</h1>
+        <p>Guatecompras · compra directa</p>
+      </div>
+      <button class="icono-btn" onclick="toggleConfig()" aria-label="Configuración">⚙️</button>
+    </div>
   </header>
-  <div class="barra">
-    <button id="buscar" onclick="buscar()">Buscar concursos</button>
+
+  <div id="config">
+    <div class="cfgwrap">
+      <h2>Configuración</h2>
+      <div class="cfg-item">
+        <span class="txt">📲 Instalar la app en tu teléfono</span>
+        <button id="btnInstalar" class="cfg-btn" style="display:none" onclick="instalar()">Instalar</button>
+        <span id="instInst" class="txt" style="flex-basis:100%; display:none;"></span>
+      </div>
+      <div class="cfg-item">
+        <span class="txt">🔔 Notificaciones de concursos nuevos</span>
+        <button id="btnNotis" class="cfg-btn" onclick="activarNotis()">Activar</button>
+      </div>
+      <div id="notiEstado" class="cfg-nota"></div>
+      <div class="cfg-nota">
+        En iPhone, primero <b>agrega la app a la pantalla de inicio</b> y ábrela desde ahí para que las notificaciones funcionen.
+        El aviso automático en segundo plano funciona mejor en Android.
+      </div>
+    </div>
   </div>
-  <div id="estado"></div>
-  <div id="lista"></div>
+
+  <div class="wrap">
+    <div class="barra"><button class="principal" id="buscar" onclick="buscar()">Buscar concursos</button></div>
+    <div id="estado"></div>
+    <div id="lista" class="lista"></div>
+  </div>
   <footer>Fuente: datos abiertos OCDS de Guatecompras (CC BY 4.0).</footer>
 
-  <!-- fflate: descomprime el ZIP/gzip del paquete mensual (JS puro, local) -->
   <script src="vendor/fflate.js"></script>
+  <script src="core.js"></script>
   <script>
-  // ----------------- Filtros (mismos que tu monitor) -----------------
-  const FILTROS = {
-    palabras_clave: ["Purificador","Sistema de purificación","Ósmosis inversa","Planta de tratamiento","Sistema de filtración","Filtro","Filtros de sedimentos","Filtro de sedimentos","Carbón activado","Lámpara UV","Ultravioleta","Potabilización","Tratamiento de agua","Equipo de purificación","Desinfección de agua","Sistema hidráulico","Ablandador de agua","Suavizador de agua","Dosificador de cloro","Clorador","Equipo de osmosis","Membranas","Agua","Bomba de agua","Bomba centrífuga","Bomba sumergible","Bomba tipo bala","Bomba vertical","Bomba horizontal","Equipo hidroneumático","Tanque hidroneumático","Presurizador","Sistema de bombeo","Electrobomba","Variador de frecuencia","Tablero eléctrico","Equipo de presión","Motor eléctrico","Sistema contra incendio","Presostato","Sistema de recirculación","Pozo mecánico","Bombeo solar","Bomba solar","Bomba para piscina","Filtro para piscina","Calentador de piscina","Bomba de calor","Climatizador de piscina","Equipo para piscina","Jacuzzi","Sistema de filtración para piscina","Cuarto de máquinas","Tratamiento de piscina","Clorinador","Panel de control piscina","Químicos para piscina","Cloro para piscina","Hipoclorito","Pastillas de cloro","Cloro granulado","Tricloro","Diclor","Alguicida","Clarificador","Floculante","Incrementador de pH","Reductor de pH","Soda ash","Neutralizador de cloro","Estabilizador de cloro","Abrillantador de agua","Consumibles para purificadora","Cartuchos filtrantes","Filtro PP","Filtro plisado","Filtro de carbón activado","Carbón block","Carbón granular","Membrana de ósmosis inversa","Membrana RO","Membranas Vontron","Membrana 4040","Membrana 8040","Housing para membrana","Sulfato de aluminio","Productos químicos para tratamiento de agua recreativa","Porta filtro","Porta cartucho","Balastro UV","Manga de cuarzo","Resina catiónica","Sal para suavizador","Arena sílica","Zeolita","Multimedia filtrante","Medios filtrantes","Repuestos para purificadora","Repuestos de ósmosis inversa","Filtros para agua potable","Cartucho Big Blue","Prefiltro","Postfiltro","Kit de filtros","Medidor TDS","Medidor de pH","Bombas dosificadoras","Antiincrustante para membranas","Químico CIP","Limpiador de membranas","Sanitizante para sistemas de agua"],
-    excluir_palabras: [],
-    entidades: [],
-    categorias: [],
-    metodos: ["compra directa", "direct"],
-    departamentos: [],
-    monto_minimo: null,
-    monto_maximo: null,
-  };
-  const SOLO_CIERRE_VIGENTE = true;
-
-  // ----------------- Logica de filtrado (puerto de monitor.py) -----------------
-  function normaliza(t) {
-    if (t === null || t === undefined) return "";
-    return String(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-  }
-  function escaparRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-  function contieneTermino(texto, term) {
-    if (!term) return false;
-    return new RegExp("\\b" + escaparRegex(term) + "\\b").test(texto);
-  }
-  function pasaFiltros(c, f) {
-    const t = normaliza([c.titulo, c.descripcion, c.comprador, c.metodo].join(" "));
-    const pal = (f.palabras_clave || []).map(normaliza).filter(Boolean);
-    if (pal.length && !pal.some(p => contieneTermino(t, p))) return false;
-    const exc = (f.excluir_palabras || []).map(normaliza).filter(Boolean);
-    if (exc.length && exc.some(p => contieneTermino(t, p))) return false;
-    const ent = (f.entidades || []).map(normaliza).filter(Boolean);
-    if (ent.length && !ent.some(e => normaliza(c.comprador).includes(e))) return false;
-    const cat = (f.categorias || []).map(normaliza).filter(Boolean);
-    if (cat.length && !cat.includes(normaliza(c.categoria))) return false;
-    const met = (f.metodos || []).map(normaliza).filter(Boolean);
-    if (met.length && !met.some(m => normaliza(c.metodo).includes(m))) return false;
-    const dep = (f.departamentos || []).map(normaliza).filter(Boolean);
-    if (dep.length && !dep.some(d => normaliza(c.region).includes(d))) return false;
-    const m = c.monto;
-    if (f.monto_minimo != null && (m == null || m < f.monto_minimo)) return false;
-    if (f.monto_maximo != null && (m == null || m > f.monto_maximo)) return false;
-    return true;
-  }
-  function cierreVigente(c, hoy) {
-    const fc = c.fecha_cierre || "";
-    return !fc || fc.slice(0, 10) >= hoy;
+  // --- Registro del service worker (instalable + segundo plano) ---
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
   }
 
-  // ----------------- OCDS: extraccion -----------------
-  const NOG_URL = "https://www.guatecompras.gt/concursos/consultaConcurso.aspx?nog=";
-  function nombreComprador(cr) {
-    const b = cr.buyer || {};
-    if (b.name) return b.name;
-    for (const p of cr.parties || []) {
-      const roles = (p.roles || []).map(r => String(r).toLowerCase());
-      if ((b.id && p.id === b.id) || roles.includes("buyer")) return p.name || "";
-    }
-    return "";
-  }
-  function regionConcurso(cr) {
-    const out = [];
-    for (const p of cr.parties || []) {
-      const a = p.address || {};
-      for (const k of ["region", "locality", "streetAddress"]) if (a[k]) out.push(a[k]);
-    }
-    return out.join(" ");
-  }
-  function extrae(cr) {
-    const t = cr.tender || {};
-    const ocid = cr.ocid || "";
-    const nog = ocid ? ocid.split("-").pop() : (t.id || "");
-    const v = t.value || {}, per = t.tenderPeriod || {};
-    return {
-      ocid, nog, titulo: t.title || "", descripcion: t.description || "",
-      estado: t.status || "", comprador: nombreComprador(cr),
-      categoria: t.mainProcurementCategory || "",
-      metodo: t.procurementMethodDetails || t.procurementMethod || "",
-      monto: v.amount != null ? v.amount : null, moneda: v.currency || "GTQ",
-      fecha_inicio: per.startDate || "", fecha_cierre: per.endDate || "",
-      region: regionConcurso(cr), url: nog ? NOG_URL + nog : "",
-    };
-  }
-  function* iter(pkg) {
-    if (pkg.records) for (const r of pkg.records) {
-      if (r.compiledRelease) yield r.compiledRelease;
-      else for (const rel of r.releases || []) if (rel && rel.tender) yield rel;
-    } else if (pkg.releases) for (const rel of pkg.releases) yield rel;
-  }
-  function descomprimir(bytes) {
-    try {
-      const files = fflate.unzipSync(bytes);
-      const nombres = Object.keys(files);
-      const n = nombres.find(x => x.toLowerCase().endsWith(".json")) || nombres[0];
-      return JSON.parse(fflate.strFromU8(files[n]));
-    } catch (e) {}
-    try { return JSON.parse(fflate.strFromU8(fflate.gunzipSync(bytes))); } catch (e) {}
-    return JSON.parse(fflate.strFromU8(bytes));
-  }
-
-  // ----------------- Flujo principal -----------------
-  function fmtMonto(c) { return c.monto == null ? "-" : c.moneda + " " + Number(c.monto).toLocaleString("es-GT"); }
-  function estado(msg) { document.getElementById("estado").textContent = msg; }
-
-  // Seguridad: los datos vienen de la API (texto libre). Se escapan antes de
-  // insertarlos como HTML, y la URL se valida (solo https de guatecompras.gt).
+  // --- Seguridad: escapar datos de la API antes de mostrarlos ---
   function escapeHtml(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, ch =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (ch) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+    });
   }
   function urlSegura(u) {
-    try {
-      const x = new URL(u);
-      if (x.protocol === "https:" && x.hostname === "www.guatecompras.gt") return x.href;
-    } catch (e) {}
+    try { var x = new URL(u); if (x.protocol === "https:" && x.hostname === "www.guatecompras.gt") return x.href; } catch (e) {}
     return "#";
   }
+  function fmtMonto(c) { return c.monto == null ? "-" : c.moneda + " " + Number(c.monto).toLocaleString("es-GT"); }
+  function estado(m) { document.getElementById("estado").textContent = m; }
 
+  function toggleConfig() { document.getElementById("config").classList.toggle("abierto"); }
+
+  // --- Buscar y mostrar ---
   async function buscar() {
-    const btn = document.getElementById("buscar");
+    var btn = document.getElementById("buscar");
     btn.disabled = true;
     document.getElementById("lista").innerHTML = "";
     try {
-      estado("Consultando meses disponibles...");
-      const fr = await fetch("https://ocds.guatecompras.gt/files");
-      if (!fr.ok) throw new Error("HTTP " + fr.status + " al listar meses");
-      const meses = (await fr.json()).result || [];
-      if (!meses.length) throw new Error("La API no devolvio meses");
-
-      estado("Descargando el paquete del mes (puede tardar)...");
-      const pr = await fetch(meses[0].files.json);
-      if (!pr.ok) throw new Error("HTTP " + pr.status + " al descargar paquete");
-      const buf = new Uint8Array(await pr.arrayBuffer());
-
-      estado("Procesando y filtrando...");
-      const pkg = descomprimir(buf);
-      const hoy = new Date().toISOString().slice(0, 10);
-      const vistos = {};
-      for (const cr of iter(pkg)) {
-        const c = extrae(cr);
-        if (normaliza(c.estado) !== "active") continue;
-        if (!pasaFiltros(c, FILTROS)) continue;
-        vistos[c.ocid || c.nog] = c;
-      }
-      let lista = Object.values(vistos);
-      if (SOLO_CIERRE_VIGENTE) lista = lista.filter(c => cierreVigente(c, hoy));
-      lista.sort((a, b) => (a.fecha_inicio || "9999").localeCompare(b.fecha_inicio || "9999"));
-
+      estado("Descargando y filtrando concursos (puede tardar)...");
+      var lista = await obtenerConcursos();
       render(lista);
       estado(lista.length + " concurso(s) de compra directa que coinciden con tus filtros.");
+      await avisarNuevos(lista);
     } catch (e) {
-      const msg = String(e && e.message ? e.message : e);
-      let extra = "";
-      if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
-        extra = " — Puede ser el navegador bloqueando la API (CORS) o el bloqueo temporal por país/frecuencia.";
-      }
-      document.getElementById("lista").innerHTML =
-        '<div class="aviso">⚠️ ' + escapeHtml(msg) + escapeHtml(extra) + '</div>';
+      var msg = String(e && e.message ? e.message : e), extra = "";
+      if (/Failed to fetch|NetworkError|Load failed/i.test(msg))
+        extra = " — Puede ser bloqueo temporal de la API por frecuencia. Espera un momento y reintenta.";
+      document.getElementById("lista").innerHTML = '<div class="aviso">⚠️ ' + escapeHtml(msg) + escapeHtml(extra) + '</div>';
       estado("");
-    } finally {
-      btn.disabled = false;
-    }
+    } finally { btn.disabled = false; }
   }
 
   function render(lista) {
-    const cont = document.getElementById("lista");
-    if (!lista.length) { cont.innerHTML = '<div class="aviso" style="background:#fff8e1;color:#8a6d00">Sin concursos nuevos que coincidan hoy.</div>'; return; }
-    cont.innerHTML = lista.map(c => `
-      <div class="card">
-        <a href="${escapeHtml(urlSegura(c.url))}" target="_blank" rel="noopener">${escapeHtml(c.titulo || "(sin titulo)")}</a>
-        <div class="meta">NOG ${escapeHtml(c.nog)} · ${escapeHtml(c.metodo)}</div>
-        <div class="meta">${escapeHtml(c.comprador)}</div>
-        <div class="fila"><span class="monto">${escapeHtml(fmtMonto(c))}</span><span>Cierre: ${escapeHtml((c.fecha_cierre || "-").slice(0,10))}</span></div>
-      </div>`).join("");
+    var cont = document.getElementById("lista");
+    if (!lista.length) { cont.innerHTML = '<div class="aviso" style="background:#fff8e1;color:#8a6d00">Sin concursos que coincidan hoy.</div>'; return; }
+    cont.innerHTML = lista.map(function (c) {
+      return '<div class="card">' +
+        '<a href="' + escapeHtml(urlSegura(c.url)) + '" target="_blank" rel="noopener">' + escapeHtml(c.titulo || "(sin titulo)") + '</a>' +
+        '<div class="meta">NOG ' + escapeHtml(c.nog) + ' · ' + escapeHtml(c.metodo) + '</div>' +
+        '<div class="meta">' + escapeHtml(c.comprador) + '</div>' +
+        '<div class="fila"><span class="monto">' + escapeHtml(fmtMonto(c)) + '</span><span>Cierre: ' + escapeHtml((c.fecha_cierre || "-").slice(0, 10)) + '</span></div>' +
+        '</div>';
+    }).join("");
   }
+
+  // --- Notificacion de concursos nuevos (al usar la app) ---
+  async function avisarNuevos(lista) {
+    try {
+      var vistos = await leerVistos();
+      var nuevos = lista.filter(function (c) { return !vistos.has(c.ocid || c.nog); });
+      if (vistos.size > 0 && nuevos.length && "Notification" in window && Notification.permission === "granted") {
+        new Notification("Nuevos concursos", {
+          body: nuevos.length + " concurso(s) nuevo(s) de compra directa.",
+          icon: "icon-192.png",
+        });
+      }
+      await marcarVistos(nuevos.map(function (c) { return c.ocid || c.nog; }));
+    } catch (e) {}
+  }
+
+  // --- Activar notificaciones (permiso + segundo plano en Android) ---
+  function notiNota(m) { document.getElementById("notiEstado").textContent = m; }
+  async function activarNotis() {
+    if (!("Notification" in window)) { notiNota("Tu navegador no soporta notificaciones."); return; }
+    var perm = await Notification.requestPermission();
+    if (perm !== "granted") { notiNota("Permiso denegado. Actívalo en los ajustes del navegador."); return; }
+    notiNota("✅ Notificaciones activadas. Te avisaremos de concursos nuevos cuando uses la app.");
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      if (reg.periodicSync) {
+        var st = await navigator.permissions.query({ name: "periodic-background-sync" });
+        if (st.state === "granted") {
+          await reg.periodicSync.register("concursos", { minInterval: 12 * 60 * 60 * 1000 });
+          notiNota("✅ Notificaciones activadas, incluida la revisión automática en segundo plano (Android).");
+        }
+      }
+    } catch (e) {}
+  }
+
+  // --- Boton de instalar (Android) / instrucciones iPhone ---
+  var deferredPrompt = null;
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById("btnInstalar").style.display = "inline-block";
+  });
+  async function instalar() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById("btnInstalar").style.display = "none";
+  }
+  // iPhone no soporta el boton: mostrar instrucciones
+  (function () {
+    var esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var standalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (esIOS && !standalone) {
+      var el = document.getElementById("instInst");
+      el.style.display = "block";
+      el.innerHTML = "En iPhone: toca <b>Compartir</b> ⬆️ y luego <b>“Agregar a pantalla de inicio”</b>.";
+    }
+  })();
   </script>
 </body>
 </html>
