@@ -99,14 +99,33 @@ function descomprimir(bytes) {
 }
 
 // ----------------- Flujo principal -----------------
-async function obtenerConcursos() {
+// onProgress(fase, recibido, total) es opcional: "descargando" reporta los bytes
+// que van llegando; "procesando" avisa cuando ya descargo y va a descomprimir/filtrar.
+async function obtenerConcursos(onProgress) {
   var fr = await fetch(API_FILES);
   if (!fr.ok) throw new Error("HTTP " + fr.status + " al listar meses");
   var meses = (await fr.json()).result || [];
   if (!meses.length) throw new Error("La API no devolvio meses");
   var pr = await fetch(meses[0].files.json);
   if (!pr.ok) throw new Error("HTTP " + pr.status + " al descargar paquete");
-  var buf = new Uint8Array(await pr.arrayBuffer());
+  var buf;
+  var total = parseInt(pr.headers.get("content-length") || "0", 10);
+  if (onProgress && pr.body && pr.body.getReader) {
+    var reader = pr.body.getReader();
+    var chunks = [], recibido = 0, r;
+    while (!(r = await reader.read()).done) {
+      chunks.push(r.value);
+      recibido += r.value.length;
+      onProgress("descargando", recibido, total);
+    }
+    buf = new Uint8Array(recibido);
+    var pos = 0;
+    for (var i = 0; i < chunks.length; i++) { buf.set(chunks[i], pos); pos += chunks[i].length; }
+    onProgress("procesando", recibido, total);
+    await new Promise(function (res) { setTimeout(res, 30); }); // dejar pintar "procesando"
+  } else {
+    buf = new Uint8Array(await pr.arrayBuffer());
+  }
   var pkg = descomprimir(buf);
   var hoy = new Date().toISOString().slice(0, 10);
   var map = new Map();
