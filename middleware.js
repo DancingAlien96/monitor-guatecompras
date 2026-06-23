@@ -1,55 +1,61 @@
-// Login basico en el servidor (Vercel Edge Middleware) con VARIOS usuarios.
+// Protege el sitio con una pantalla de login (web/login.html).
+// Si no hay una sesion valida (cookie firmada), redirige a /login.html.
 //
-// Las credenciales se definen en una variable de entorno en Vercel llamada
-// LOGIN_USERS, con la lista de "usuario:contrasena" separados por coma o por
-// salto de linea. Ejemplo:
-//    ana:clave1,luis:clave2,maria:clave3,jose:clave4
-// (Las contrasenas pueden contener ":" pero NO comas ni saltos de linea.)
+// Configuracion (variables de entorno en Vercel):
+//   LOGIN_USERS  -> "usuario1:clave1,usuario2:clave2,..." (la lista de usuarios)
+//   AUTH_SECRET  -> una cadena larga y aleatoria (firma las sesiones)
 //
-// NO van en el codigo, asi nadie las ve. Protege todo el sitio MENOS
-// /api/notify (que lo llama el cron y se protege aparte con CRON_SECRET).
+// Si falta alguna, NO bloquea (para no dejar el sitio inaccesible por error).
 
 export const config = {
-  matcher: ['/((?!api/notify).*)'],
+  matcher: ['/((?!_next).*)'],
 };
 
-function credenciales() {
-  const map = new Map();
-  (process.env.LOGIN_USERS || '').split(/[\n,]/).forEach((par) => {
-    const s = par.trim();
-    if (!s) return;
-    const i = s.indexOf(':');
-    if (i > 0) map.set(s.slice(0, i).trim(), s.slice(i + 1));
-  });
-  // Compatibilidad: tambien admite un usuario suelto si se definio asi.
-  if (process.env.LOGIN_USER && process.env.LOGIN_PASS) {
-    map.set(process.env.LOGIN_USER, process.env.LOGIN_PASS);
-  }
-  return map;
+// Rutas que se sirven SIN sesion: la pantalla de login, su API, y el cron.
+const ABIERTAS = ['/login.html', '/api/login', '/api/notify'];
+
+function hayCredenciales() {
+  return !!(process.env.LOGIN_USERS || (process.env.LOGIN_USER && process.env.LOGIN_PASS));
 }
 
-export default function middleware(req) {
-  const creds = credenciales();
-  // Si no hay credenciales configuradas, no se bloquea nada (evita dejar el
-  // sitio inaccesible por error antes de poner la variable en Vercel).
-  if (creds.size === 0) return;
+function leerCookie(req, nombre) {
+  const c = req.headers.get('cookie') || '';
+  const m = c.match(new RegExp('(?:^|;\\s*)' + nombre + '=([^;]+)'));
+  return m ? m[1] : null;
+}
 
-  const auth = req.headers.get('authorization') || '';
-  const [scheme, encoded] = auth.split(' ');
-  if (scheme === 'Basic' && encoded) {
-    let decoded = '';
-    try { decoded = atob(encoded); } catch (e) {}
-    const i = decoded.indexOf(':');
-    const u = decoded.slice(0, i);
-    const p = decoded.slice(i + 1);
-    if (creds.has(u) && creds.get(u) === p) return; // usuario y clave correctos
-  }
+async function hmac(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  let bin = '';
+  const bytes = new Uint8Array(sig);
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
-  return new Response('Acceso restringido. Inicia sesión.', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Concursos Guatecompras", charset="UTF-8"',
-      'Content-Type': 'text/plain; charset=utf-8',
-    },
-  });
+async function sesionValida(token, secret) {
+  const p = token.split('.');
+  if (p.length !== 2) return false;
+  if (p[1] !== (await hmac(secret, p[0]))) return false; // firma incorrecta
+  let payload = '';
+  try { payload = atob(p[0].replace(/-/g, '+').replace(/_/g, '/')); } catch (e) { return false; }
+  const exp = parseInt(payload.split('|')[1] || '0', 10);
+  return Date.now() < exp; // no vencida
+}
+
+export default async function middleware(req) {
+  const pathname = new URL(req.url).pathname;
+  if (ABIERTAS.some(function (r) { return pathname === r || pathname.indexOf(r) === 0; })) return;
+
+  // Sin credenciales o sin secreto configurados -> no bloquear.
+  if (!hayCredenciales() || !process.env.AUTH_SECRET) return;
+
+  const token = leerCookie(req, 'sesion');
+  if (token && (await sesionValida(token, process.env.AUTH_SECRET))) return;
+
+  const url = new URL(req.url);
+  url.pathname = '/login.html';
+  url.search = '';
+  return Response.redirect(url, 302);
 }
