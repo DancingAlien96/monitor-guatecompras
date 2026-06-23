@@ -96,6 +96,7 @@
     <div id="herramientas">
       <input id="busca" type="search" placeholder="🔍 Buscar (título, entidad, NOG)…" oninput="aplicarVista()" />
       <select id="orden" onchange="aplicarVista()">
+        <option value="reciente">Más recientes</option>
         <option value="cierre">Cierre más próximo</option>
         <option value="montoDesc">Monto: mayor a menor</option>
         <option value="montoAsc">Monto: menor a mayor</option>
@@ -176,11 +177,13 @@
       if (q && normaliza([c.titulo, c.nog, c.comprador, c.metodo].join(" ")).indexOf(q) < 0) return false;
       return true;
     });
+    var claveFecha = function (c) { return c.fecha_cierre || c.fecha_inicio || c.fecha_publicacion || ""; };
     _filtrados.sort(function (a, b) {
       if (orden === "montoDesc") return (b.monto || 0) - (a.monto || 0);
       if (orden === "montoAsc") return (a.monto || 0) - (b.monto || 0);
       if (orden === "titulo") return String(a.titulo).localeCompare(String(b.titulo));
-      return (a.fecha_cierre || "9999").localeCompare(b.fecha_cierre || "9999");
+      if (orden === "cierre") return (a.fecha_cierre || "9999").localeCompare(b.fecha_cierre || "9999");
+      return claveFecha(b).localeCompare(claveFecha(a)); // "reciente": mas nuevos primero
     });
     _pagina = 1;
     renderPagina();
@@ -213,15 +216,25 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  // Muestra la fecha mas relevante que el concurso SI trae (muchas compras
+  // directas no tienen cierre, pero si fecha de inicio/publicacion).
+  function mejorFecha(c) {
+    if (c.fecha_cierre) return "Cierre: " + c.fecha_cierre.slice(0, 10);
+    if (c.fecha_inicio) return "Inicio: " + c.fecha_inicio.slice(0, 10);
+    if (c.fecha_publicacion) return "Publicado: " + c.fecha_publicacion.slice(0, 10);
+    return "Sin fecha";
+  }
+
   function render(lista) {
     var cont = document.getElementById("lista");
     if (!lista.length) { cont.innerHTML = '<div class="aviso" style="background:#fff8e1;color:#8a6d00">Sin concursos que coincidan hoy.</div>'; return; }
     cont.innerHTML = lista.map(function (c) {
+      var dinero = c.monto != null ? '<span class="monto">' + escapeHtml(fmtMonto(c)) + '</span>' : '';
       return '<div class="card">' +
         '<a href="' + escapeHtml(urlSegura(c.url)) + '" target="_blank" rel="noopener">' + escapeHtml(c.titulo || "(sin titulo)") + '</a>' +
         '<div class="meta">NOG ' + escapeHtml(c.nog) + ' · ' + escapeHtml(c.metodo) + '</div>' +
         '<div class="meta">' + escapeHtml(c.comprador) + '</div>' +
-        '<div class="fila"><span class="monto">' + escapeHtml(fmtMonto(c)) + '</span><span>Cierre: ' + escapeHtml((c.fecha_cierre || "-").slice(0, 10)) + '</span></div>' +
+        '<div class="fila"><span>📅 ' + escapeHtml(mejorFecha(c)) + '</span>' + dinero + '</div>' +
         '</div>';
     }).join("");
   }
